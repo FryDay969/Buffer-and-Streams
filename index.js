@@ -1,17 +1,38 @@
 const fs = require('fs');
 const http = require("http");
-const zlib = require('zlib');
+const archiver = require('archiver');
 require("dotenv").config();
 const PORT = process.env.PORT || 3000;
 
+
+
 const server = http.createServer((req, res) =>{
+    if(req.url === '/' && req.method === "GET"){
+        req.write("Home");
+        req.end()
+    }
     let downloadUrl = req.url.replace('/api/downloads/?', '');
     console.log(downloadUrl);
     http.get(downloadUrl, (res)=>{
-        const path = "C:/Users/L-64 E5570/Downloads/downloaded-image.png.gz";
+        if(!downloadUrl){
+            throw err
+            res.end(new Error(err))
+        }
+        const downloadFolder = process.env.USERPROFILE + "/Downloads";
+        const path = `${downloadFolder}/img.zip`;
         const write = fs.createWriteStream(path);
-        const zip = zlib.createGzip();
-        res.pipe(zip).pipe(write);
+        const archive = archiver("zip",{
+            zlib: { level: 9 }
+        });
+        write.on('close', function() {
+            console.log(archive.pointer() + ' total bytes');
+            console.log('archiver has been finalized and the output file descriptor has closed.');
+        });
+        write.on('end', function() {
+            console.log('Data has been drained');
+        });
+        archive.pipe(write);
+        res.pipe(write);
     })
     res.end()
 })
